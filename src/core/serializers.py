@@ -48,11 +48,13 @@ class LoginSerializer(serializers.Serializer):
 
         if email is None:
             raise serializers.ValidationError(
-                'An email address is required to log in.'
+                'не корректный эмайл'
             )
 
         if password is None:
-            raise exceptions.AuthenticationFailed()
+            raise exceptions.AuthenticationFailed(
+                "не указан пароль"
+            )
 
         user = authenticate(username=email, password=password)
 
@@ -61,7 +63,7 @@ class LoginSerializer(serializers.Serializer):
 
         if not user.is_active:
             raise serializers.ValidationError(
-                'This user has been deactivated.'
+                'не правильный логин или пароль'
             )
 
         return user.get_data()

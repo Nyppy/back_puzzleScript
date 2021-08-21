@@ -9,6 +9,7 @@ from speech_recognition import Recognizer as recog
 import docx
 
 import moviepy.editor as mp
+from pydub import AudioSegment
 
 
 class SoundMixin:
@@ -17,6 +18,11 @@ class SoundMixin:
         example to use:
             result = SoundMixin('/{}.wav'.format(audio)).get_data()
     """
+
+    @staticmethod
+    def _sliced_sound(audio_file):
+        song = AudioSegment.from_wav(audio_file)
+        return song[0:120000]
 
     @staticmethod
     def _get_content(audio_file):
@@ -61,7 +67,9 @@ class MainManager(VideoConvertor, SoundMixin):
 
     def get_text_from_video(self, video):
         audio = self.to_convert(video, 0)
-        return self.get_data(speech_recog.AudioFile(self.BASE_DIR + '/{}.wav'.format(audio)))
+        audio_file = self._sliced_sound(self.BASE_DIR + '/{}.wav'.format(audio))
+        audio_file.export(f"up{audio}.wav", format="wav")
+        return self.get_data(speech_recog.AudioFile(self.BASE_DIR + '/{}.wav'.format(f'up{audio}')))
 
     @staticmethod
     def create_doc(text):

@@ -1,5 +1,6 @@
 import mimetypes
 import os
+import random
 
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -14,7 +15,8 @@ from . import serializers
 from . import models
 from .short_text import make_sort_text
 
-from .main import MainManager
+from src.main import MainManager
+from src.html_convertor import converting_to_doc
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
@@ -22,15 +24,21 @@ class ProfileViewSet(viewsets.ModelViewSet):
     queryset = models.User.objects.all()
 
     def list(self, request, *args, **kwargs):
-        raise serializers.exceptions.PermissionDenied()
+        raise serializers.exceptions.PermissionDenied(
+            "доступ запрещен"
+        )
 
     def retrieve(self, request, *args, **kwargs):
         authorization = request.query_params.get("authorization", None)
         if not authorization:
-            raise serializers.exceptions.AuthenticationFailed()
+            raise serializers.exceptions.AuthenticationFailed(
+                "отсутсвует токен"
+            )
         user = models.User.objects.filter(authorization=authorization).first()
         if not user:
-            raise serializers.exceptions.NotAuthenticated()
+            raise serializers.exceptions.NotAuthenticated(
+                "отсутсвует пользователь"
+            )
 
         return JsonResponse(user.get_data())
 
@@ -70,7 +78,9 @@ class FileManagerViewSet(viewsets.ModelViewSet):
         file_instance = models.FileManager.objects.filter(profile=int(profile_id)).first()
 
         if not profile_id:
-            raise serializers.exceptions.AuthenticationFailed()
+            raise serializers.exceptions.AuthenticationFailed(
+                "отсутсвует пользователь"
+            )
 
         response = HttpResponse(
             file_instance.full_text,
@@ -90,7 +100,7 @@ class FileManagerViewSet(viewsets.ModelViewSet):
             file_instance.short_text = short_text[0]
         file_instance.save()
 
-        return JsonResponse({'full_text': full_text, 'short_text': short_text})
+        return JsonResponse({'id': file_instance.pk, 'full_text': full_text, 'short_text': short_text})
 
 
 class FileView(APIView):
@@ -110,11 +120,12 @@ class FileView(APIView):
         if doc_id:
             doc_inst = models.FileManager.objects.filter(pk=int(doc_id)).first()
             if doc_inst:
-                doc = doc_inst.text_doc
+                doc = doc_inst.text_doc.url
                 if doc:
                     doc = doc.split('/')
                     doc = doc[-1]
-                    path = os.path.dirname(os.path.abspath(__file__)) + f'/media/doc/{doc}'
+                    path = os.path.dirname(os.path.abspath(__file__)).split('/')
+                    path = '/'.join(map(str, path[0:len(path)-1])) + f'/{doc}'
 
                     chunk_size = 8192
                     response = StreamingHttpResponse(FileWrapper(open(path, 'rb'), chunk_size),
@@ -129,3 +140,16 @@ class FileView(APIView):
                     )
                     response['Content-Disposition'] = 'attachment; filename=file.docx'
                     return response
+
+    def post(self, request):
+        file_manager_id = request.data.get("file_manager_id", None)
+        input_file = request.data.get("input_file", None)
+
+        doc_inst = models.FileManager.objects.filter(pk=int(file_manager_id)).first()
+        doc_inst.text_doc = input_file
+        doc_inst.save()
+        output_name = str(random.randint(1, 1000000000))
+        converting_to_doc(doc_inst.text_doc.name, output_name)
+        doc_inst.text_doc = f'{output_name}.docx'
+        doc_inst.save()
+        return JsonResponse(doc_inst.get_data)

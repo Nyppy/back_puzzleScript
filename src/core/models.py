@@ -144,8 +144,10 @@ class FileManager(models.Model):
 
     @property
     def get_data(self):
+        host = 'http://127.0.0.1:8000'
         return {
             'id': self.pk,
+            'text_doc': host + self.text_doc.url,
             'full_text': self.full_text,
             'short_text': self.short_text
         }
