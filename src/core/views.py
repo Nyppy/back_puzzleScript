@@ -91,7 +91,8 @@ class FileManagerViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         instance = super().create(request)
-        file_instance = models.FileManager.objects.filter(profile=instance.data['profile']).first()
+        file_instance = models.FileManager()
+        file_instance.profile = models.User.objects.get(id=instance.data['profile'])
         full_text = MainManager().get_text_from_video(instance.data['video'].split('/')[-1])
 
         short_text = make_sort_text(full_text)
@@ -111,7 +112,7 @@ class FileView(APIView):
             data_set = models.FileManager.objects.filter(profile=int(profile_id)).all()
 
             if data_set:
-                data = [instance.get_data for instance in data_set]
+                data = [instance.get_data_for_profile for instance in data_set]
                 return JsonResponse({'data': data})
             else:
                 return JsonResponse({'data': None})

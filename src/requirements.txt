@@ -1,0 +1,11 @@
+Django==3.2.5
+django-cors-headers==3.7.0
+djangorestframework==3.12.4
+htmldocx==0.0.5
+psycopg2-binary==2.8.6
+pydub==0.25.1
+PyJWT==2.1.0
+typing-extensions==3.10.0.0
+moviepy==1.0.3
+SpeechRecognition==3.8.1
+vosk==0.3.30

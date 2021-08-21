@@ -3,10 +3,12 @@ import random
 import secrets
 import string
 
-import speech_recognition as speech_recog
-from speech_recognition import Recognizer as recog
-
 import docx
+import json
+import wave
+
+from vosk import Model, KaldiRecognizer
+import vosk
 
 import moviepy.editor as mp
 from pydub import AudioSegment
@@ -25,14 +27,18 @@ class SoundMixin:
         return song[0:120000]
 
     @staticmethod
-    def _get_content(audio_file):
-        with audio_file as audio_file:
-            audio_content = recog().record(audio_file)
+    def get_data(model: vosk.Model, audio: str) -> str:
+        """
+            Recognize Russian voice in wav
+        """
 
-        return audio_content
+        wave_audio_file = wave.open(audio, "rb")
+        offline_recognizer = KaldiRecognizer(model, 70000)
+        data = wave_audio_file.readframes(wave_audio_file.getnframes())
 
-    def get_data(self, audio_file) -> str:
-        return recog().recognize_google(self._get_content(audio_file), language='ru-RU')
+        offline_recognizer.AcceptWaveform(data)
+        recognized_data = json.loads(offline_recognizer.Result())["text"]
+        return recognized_data
 
 
 class VideoConvertor:
@@ -67,9 +73,10 @@ class MainManager(VideoConvertor, SoundMixin):
 
     def get_text_from_video(self, video):
         audio = self.to_convert(video, 0)
-        audio_file = self._sliced_sound(self.BASE_DIR + '/{}.wav'.format(audio))
-        audio_file.export(f"up{audio}.wav", format="wav")
-        return self.get_data(speech_recog.AudioFile(self.BASE_DIR + '/{}.wav'.format(f'up{audio}')))
+        return self.get_data(
+            model=Model(self.BASE_DIR + "/vosk-model-small-ru-0.15"),
+            audio=self.BASE_DIR + '/{}.wav'.format(f'{audio}')
+        )
 
     @staticmethod
     def create_doc(text):

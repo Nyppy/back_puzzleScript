@@ -144,10 +144,24 @@ class FileManager(models.Model):
 
     @property
     def get_data(self):
-        host = 'http://127.0.0.1:8000'
+        host = 'http://89.223.69.148:8000'
         return {
             'id': self.pk,
             'text_doc': host + self.text_doc.url,
+            'full_text': self.full_text,
+            'short_text': self.short_text
+        }
+
+    @property
+    def get_name(self):
+        name = self.text_doc.name
+        return str(name)
+
+    @property
+    def get_data_for_profile(self):
+        return {
+            'id': self.pk,
+            'name': self.get_name,
             'full_text': self.full_text,
             'short_text': self.short_text
         }
